@@ -27,6 +27,13 @@ class PointResource extends JsonResource
             'createdAt' => $this->created_at,
             'statusChangedAt' => $this->status_changed_at,
             'confirmations' => $this->confirmations_count,
+            'confirmedByMe' => $this->whenHas('confirmed_by_me', fn ($value) => (bool) $value),
+            'photos' => $this->whenLoaded('photos', fn () => $this->photos->map(fn ($photo) => [
+                'id' => $photo->id,
+                'url' => $photo->url(),
+                'kind' => $photo->kind,
+            ])),
+            'events' => PointEventResource::collection($this->whenLoaded('events')),
         ];
     }
 }

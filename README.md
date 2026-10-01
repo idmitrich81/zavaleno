@@ -15,6 +15,7 @@ cd api
 composer install
 cp .env.example .env && php artisan key:generate
 php artisan migrate --seed   # город Томск и демо-точки из прототипа
+php artisan storage:link     # фото отметок отдаются из storage/app/public
 php artisan serve            # http://127.0.0.1:8000
 ```
 
@@ -28,6 +29,18 @@ npm run dev                  # запросы /api проксируются на
 Без ключа MapTiler в режиме разработки карта берёт тайлы с публичного сервера OSM; в продакшене ключ обязателен.
 
 Демо-точки (`api/database/seeders/data/tomsk.json`) вымышленные, координаты примерные; сидер добавляет их только в окружении `local`.
+
+## Модерация
+
+Пока нет Telegram-бота, отметки публикуются из консоли:
+
+```bash
+cd api
+php artisan points:moderate              # очередь на проверке
+php artisan points:moderate 17 approve   # опубликовать; reject — отклонить
+```
+
+Размытие лиц и номеров ещё не сделано: такие фото пока нужно отклонять.
 
 ## Проверки
 

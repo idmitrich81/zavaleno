@@ -1,12 +1,22 @@
-export type PointStatus = 'snowed' | 'in_work' | 'cleared'
+/** pending приходит только автору отметки: остальным точка на проверке не видна. */
+export type PointStatus = 'pending' | 'snowed' | 'in_work' | 'cleared'
 
 export type PointType = 'yard' | 'parking' | 'street' | 'sidewalk' | 'roof'
 
-/** Публичная точка в том виде, в каком её будет отдавать GET /api/{city}/points. */
+export type EventKind = 'submitted' | 'created' | 'confirmed' | 'in_work' | 'cleared' | 'reopened'
+
+export interface PointEvent {
+  id: number
+  kind: EventKind
+  text: string
+  createdAt: string
+}
+
+/** Публичная точка: элемент ответа GET /api/{city}/points. */
 export interface Point {
   id: number
   address: string
-  district: string
+  district: string | null
   lat: number
   lng: number
   type: PointType
@@ -16,7 +26,27 @@ export interface Point {
   confirmations: number
 }
 
-export type StatusFilter = PointStatus | 'all'
+/** Ответ GET /api/{city}/points/{id}: точка с лентой событий, свежие сверху. */
+export interface Photo {
+  id: number
+  url: string
+  kind: 'before' | 'after'
+}
+
+export interface PointDetail extends Point {
+  events: PointEvent[]
+  photos: Photo[]
+  confirmedByMe: boolean
+}
+
+export interface ConfirmationState {
+  confirmations: number
+  confirmedByMe: boolean
+}
+
+export type StatusFilter = Exclude<PointStatus, 'pending'> | 'all'
+
+export type SortKey = 'fresh' | 'long' | 'confirmed'
 
 export interface City {
   slug: string

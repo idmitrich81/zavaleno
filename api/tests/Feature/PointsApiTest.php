@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EventKind;
 use App\Enums\PointStatus;
 use App\Models\City;
 use App\Models\Point;
@@ -58,5 +59,30 @@ class PointsApiTest extends TestCase
     public function test_an_unknown_city_is_not_found(): void
     {
         $this->getJson('/api/atlantis/points')->assertNotFound();
+    }
+
+    public function test_a_point_is_shown_with_its_events_newest_first(): void
+    {
+        $point = Point::factory()->for(City::factory()->create(['slug' => 'tomsk']))->create();
+        $point->events()->createMany([
+            ['kind' => EventKind::Created, 'text' => 'Отметку добавили', 'created_at' => now()->subDays(3)],
+            ['kind' => EventKind::InWork, 'text' => 'Уборку заказали', 'created_at' => now()->subDay()],
+        ]);
+
+        $this->getJson("/api/tomsk/points/{$point->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $point->id)
+            ->assertJsonPath('data.events.*.kind', ['in_work', 'created'])
+            ->assertJsonPath('data.events.0.text', 'Уборку заказали');
+    }
+
+    public function test_a_point_that_is_not_public_or_belongs_to_another_city_is_not_found(): void
+    {
+        $tomsk = City::factory()->create(['slug' => 'tomsk']);
+        $pending = Point::factory()->for($tomsk)->create(['status' => PointStatus::Pending]);
+        $elsewhere = Point::factory()->for(City::factory()->create(['slug' => 'omsk']))->create();
+
+        $this->getJson("/api/tomsk/points/{$pending->id}")->assertNotFound();
+        $this->getJson("/api/tomsk/points/{$elsewhere->id}")->assertNotFound();
     }
 }

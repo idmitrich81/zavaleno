@@ -12,10 +12,12 @@ interface Props {
   points: Point[]
   filter: StatusFilter
   onFilter: (f: StatusFilter) => void
+  query: string
+  onQuery: (q: string) => void
   note: string | null
 }
 
-export default function TopBar({ city, points, filter, onFilter, note }: Props) {
+export default function TopBar({ city, points, filter, onFilter, query, onQuery, note }: Props) {
   const count = (f: StatusFilter) => (f === 'all' ? points.length : points.filter((p) => p.status === f).length)
 
   return (
@@ -32,6 +34,19 @@ export default function TopBar({ city, points, filter, onFilter, note }: Props) 
           <span>Снежная карта: {city.name}</span>
         </div>
       </div>
+      <label className="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7" />
+          <path d="m20 20-3.5-3.5" />
+        </svg>
+        <input
+          type="search"
+          placeholder="Найти улицу или дом"
+          autoComplete="off"
+          value={query}
+          onChange={(e) => onQuery(e.target.value)}
+        />
+      </label>
       <div className="chips" role="group" aria-label="Фильтр по статусу">
         {FILTERS.map((f) => (
           <button

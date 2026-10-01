@@ -1,11 +1,16 @@
-import L from 'leaflet'
-import 'leaflet.markercluster'
-import { useEffect, useRef } from 'react'
+import * as maplibregl from 'maplibre-gl'
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url'
+import { Protocol } from 'pmtiles'
+import { useEffect, useRef, useState } from 'react'
+import Supercluster from 'supercluster'
 import { daysSince } from '../lib/format.ts'
+import { mapStyle } from '../lib/mapStyle.ts'
 import { sheetHeight, type SheetState } from '../lib/sheet.ts'
 import type { City, Point } from '../lib/types.ts'
 
-const MAPTILER_KEY: string | undefined = import.meta.env.VITE_MAPTILER_KEY
+// Сборщик сам не находит фоновый скрипт MapLibre, поэтому путь к нему задаём явно.
+maplibregl.setWorkerUrl(workerUrl)
+maplibregl.addProtocol('pmtiles', new Protocol().tile)
 
 const ICON_TRUCK =
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/></svg>'
@@ -18,27 +23,9 @@ const FOCUS_ZOOM = 16
 const DESKTOP_PANEL = 436
 const MOBILE_BAR = 160
 
-function tileLayer(dark: boolean): L.TileLayer | null {
-  if (MAPTILER_KEY) {
-    const style = dark ? 'streets-v2-dark' : 'streets-v2'
-    return L.tileLayer(`https://api.maptiler.com/maps/${style}/256/{z}/{x}/{y}{r}.png?key=${MAPTILER_KEY}`, {
-      maxZoom: 20,
-      attribution:
-        '<a href="https://www.maptiler.com/copyright/" target="_blank" rel="noopener">© MapTiler</a> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>',
-    })
-  }
-  // Публичный сервер OSM годится только для локальной разработки, в продакшене нужен ключ MapTiler.
-  if (import.meta.env.DEV) {
-    return L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution:
-        '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>',
-    })
-  }
-  return null
-}
+const scheme = () => window.matchMedia('(prefers-color-scheme: dark)')
 
-function markerIcon(p: Point, selected: boolean): L.DivIcon {
+function markerElement(p: Point, selected: boolean, onSelect: (id: number) => void): HTMLElement {
   const inner =
     p.status === 'snowed'
       ? `${daysSince(p.createdAt)} дн`
@@ -47,22 +34,19 @@ function markerIcon(p: Point, selected: boolean): L.DivIcon {
         : p.status === 'cleared'
           ? ICON_CHECK
           : 'проверка'
-  return L.divIcon({
-    className: 'mk-wrap',
-    html: `<div class="mk ${p.status}${selected ? ' sel' : ''}">${inner}</div>`,
-    iconSize: undefined,
-  })
+  const el = document.createElement('button')
+  el.className = `mk ${p.status}${selected ? ' sel' : ''}`
+  el.title = p.address
+  el.innerHTML = inner
+  el.addEventListener('click', () => onSelect(p.id))
+  return el
 }
 
-/** Показывает точку в центре той части карты, которую не закрывают панель или шторка. */
-function focus(map: L.Map, p: Point, sheet: SheetState) {
-  const size = map.getSize()
-  const zoom = Math.max(map.getZoom(), FOCUS_ZOOM)
-  const target = window.matchMedia('(min-width: 900px)').matches
-    ? L.point(DESKTOP_PANEL + (size.x - DESKTOP_PANEL) / 2, size.y / 2)
-    : L.point(size.x / 2, MOBILE_BAR + Math.max(0, size.y - sheetHeight(sheet) - MOBILE_BAR) / 2)
-  const shift = target.subtract(size.divideBy(2))
-  map.flyTo(map.unproject(map.project([p.lat, p.lng], zoom).subtract(shift), zoom), zoom, { duration: 0.5 })
+/** Сдвиг от центра экрана до центра той части карты, которую не закрывают панель или шторка. */
+function visibleOffset(sheet: SheetState): [number, number] {
+  return window.matchMedia('(min-width: 900px)').matches
+    ? [DESKTOP_PANEL / 2, 0]
+    : [0, (MOBILE_BAR - Math.min(sheetHeight(sheet), sheetHeight('half'))) / 2]
 }
 
 interface Props {
@@ -79,54 +63,99 @@ interface Props {
 
 export default function MapView({ city, points, selected, sheet, onSelect, onCenter, flyTo }: Props) {
   const el = useRef<HTMLDivElement>(null)
-  const map = useRef<L.Map | null>(null)
-  const cluster = useRef<L.MarkerClusterGroup | null>(null)
+  const [map, setMap] = useState<maplibregl.Map | null>(null)
   const selectedId = selected?.id ?? null
+  const pinning = onCenter !== undefined
+
+  const centerListener = useRef(onCenter)
+  useEffect(() => {
+    centerListener.current = onCenter
+  })
 
   useEffect(() => {
-    const m = L.map(el.current!, { zoomControl: false }).setView(city.center, city.zoom)
-    L.control.zoom({ position: 'topright' }).addTo(m)
-    map.current = m
-
-    const scheme = window.matchMedia('(prefers-color-scheme: dark)')
-    let tiles: L.TileLayer | null = null
-    const applyTiles = () => {
-      tiles?.remove()
-      tiles = tileLayer(scheme.matches)
-      tiles?.addTo(m)
-    }
-    applyTiles()
-    scheme.addEventListener('change', applyTiles)
-
-    cluster.current = L.markerClusterGroup({
-      showCoverageOnHover: false,
-      maxClusterRadius: 44,
-      iconCreateFunction: (c) =>
-        L.divIcon({ className: 'mk-wrap', html: `<div class="mk-cluster">${c.getChildCount()}</div>`, iconSize: undefined }),
-    }).addTo(m)
+    const media = scheme()
+    const m = new maplibregl.Map({
+      container: el.current!,
+      style: mapStyle(city, media.matches),
+      center: [city.center[1], city.center[0]],
+      // Масштаб MapLibre на единицу меньше привычного «плиточного».
+      zoom: city.zoom - 1,
+      minZoom: 9,
+      maxZoom: 18,
+      // Файл карты кончается на границах города: дальше была бы пустота.
+      maxBounds: city.bounds,
+      attributionControl: false,
+      // Поворот и наклон на карте отметок только мешают.
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
+    })
+    m.touchZoomRotate.disableRotation()
+    m.addControl(new maplibregl.AttributionControl({ compact: false }), 'bottom-right')
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right')
+    m.on('moveend', () => {
+      const c = m.getCenter()
+      centerListener.current?.(c.lat, c.lng)
+    })
+    const applyTheme = () => m.setStyle(mapStyle(city, media.matches))
+    media.addEventListener('change', applyTheme)
+    setMap(m)
 
     return () => {
-      scheme.removeEventListener('change', applyTiles)
-      cluster.current = null
-      map.current = null
+      media.removeEventListener('change', applyTheme)
       m.remove()
+      setMap(null)
     }
   }, [city])
 
+  // Маркеры и кластеры: пересчитываем при смене точек, выбора и после каждого движения карты.
   useEffect(() => {
-    const group = cluster.current
-    if (!group) return
-    group.clearLayers()
-    group.addLayers(
-      points.map((p) =>
-        L.marker([p.lat, p.lng], {
-          icon: markerIcon(p, p.id === selectedId),
-          title: p.address,
-          zIndexOffset: p.id === selectedId ? 1000 : p.status === 'snowed' ? 200 : 0,
-        }).on('click', () => onSelect(p.id)),
-      ),
+    if (!map) return
+    const byId = new Map(points.map((p) => [p.id, p]))
+    const index = new Supercluster<{ id: number }>({ radius: 44, maxZoom: FOCUS_ZOOM - 1 })
+    index.load(
+      points.map((p) => ({
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+        properties: { id: p.id },
+      })),
     )
-  }, [points, selectedId, onSelect, city])
+
+    let markers: maplibregl.Marker[] = []
+    const render = () => {
+      markers.forEach((marker) => marker.remove())
+      const b = map.getBounds()
+      markers = index.getClusters([b.getWest(), b.getSouth(), b.getEast(), b.getNorth()], Math.round(map.getZoom())).map((item) => {
+        const [lng, lat] = item.geometry.coordinates
+        let element: HTMLElement
+        if ('cluster' in item.properties) {
+          const clusterId = item.properties.cluster_id
+          element = document.createElement('button')
+          element.className = 'mk-cluster'
+          element.textContent = String(item.properties.point_count)
+          element.addEventListener('click', () =>
+            map.easeTo({ center: [lng, lat], zoom: index.getClusterExpansionZoom(clusterId), duration: 300 }),
+          )
+        } else {
+          const p = byId.get(item.properties.id)!
+          element = markerElement(p, p.id === selectedId, onSelect)
+          if (p.id === selectedId) element.style.zIndex = '2'
+          else if (p.status === 'snowed') element.style.zIndex = '1'
+        }
+        // Обёртка нулевого размера: сам значок позиционирует себя стилями относительно точки.
+        const anchor = document.createElement('div')
+        anchor.className = 'mk-anchor'
+        anchor.append(element)
+        return new maplibregl.Marker({ element: anchor }).setLngLat([lng, lat]).addTo(map)
+      })
+    }
+    render()
+    map.on('moveend', render)
+    return () => {
+      map.off('moveend', render)
+      markers.forEach((marker) => marker.remove())
+    }
+  }, [map, points, selectedId, onSelect])
 
   // Летим к точке только при смене выбора, а не при каждом обновлении списка или шторки.
   const flight = useRef({ selected, sheet })
@@ -135,30 +164,25 @@ export default function MapView({ city, points, selected, sheet, onSelect, onCen
   })
   useEffect(() => {
     const { selected, sheet } = flight.current
-    if (map.current && selected) focus(map.current, selected, sheet)
-  }, [selectedId, city])
+    if (!map || !selected) return
+    const [dx, dy] = visibleOffset(sheet)
+    map.easeTo({
+      center: [selected.lng, selected.lat],
+      zoom: Math.max(map.getZoom(), FOCUS_ZOOM),
+      offset: [dx, dy],
+      duration: 500,
+    })
+  }, [map, selectedId])
 
   useEffect(() => {
-    const m = map.current
-    if (!m || !onCenter) return
-    const report = () => {
-      const c = m.getCenter()
-      onCenter(c.lat, c.lng)
-    }
-    report()
-    m.on('moveend', report)
-    return () => {
-      m.off('moveend', report)
-    }
-  }, [onCenter, city])
+    if (!map || !pinning) return
+    const c = map.getCenter()
+    centerListener.current?.(c.lat, c.lng)
+  }, [map, pinning])
 
   useEffect(() => {
-    if (map.current && flyTo) map.current.setView([flyTo.lat, flyTo.lng], Math.max(map.current.getZoom(), 17))
-  }, [flyTo, city])
+    if (map && flyTo) map.easeTo({ center: [flyTo.lng, flyTo.lat], zoom: Math.max(map.getZoom(), 17), duration: 300 })
+  }, [map, flyTo])
 
-  return (
-    <div className="map" ref={el} aria-label="Карта заваленных мест">
-      {!MAPTILER_KEY && !import.meta.env.DEV && <p className="map-note">Карта не настроена: нет ключа MapTiler.</p>}
-    </div>
-  )
+  return <div className="map" ref={el} aria-label="Карта заваленных мест" />
 }

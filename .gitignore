@@ -3,3 +3,7 @@ dist/
 .env
 .env.local
 .DS_Store
+
+# Утилита pmtiles и собранные ею файлы карт: скачиваются и собираются заново, см. README
+tools/
+web/public/map/*.pmtiles

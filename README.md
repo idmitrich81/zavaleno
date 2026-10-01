@@ -2,7 +2,7 @@
 
 Народная карта заваленных снегом мест Томска: zavaleno.ru/tomsk.
 
-- `web/` — фронтенд: Vite + React + TypeScript, Leaflet + markercluster, тайлы MapTiler.
+- `web/` — фронтенд: Vite + React + TypeScript, MapLibre GL с картой на данных OpenStreetMap, которая лежит на нашем же домене.
 - `api/` — бэкенд: Laravel 12 (PHP 8.2+), локально SQLite, на хостинге reg.ru MySQL.
 - `docs/prototype.html` — кликабельный прототип: эталон UX, статусов и текстов, но не основа кода.
 
@@ -22,11 +22,25 @@ php artisan serve            # http://127.0.0.1:8000
 ```bash
 cd web
 npm install
-cp .env.example .env.local   # вписать ключ MapTiler
 npm run dev                  # запросы /api проксируются на 127.0.0.1:8000
 ```
 
-Без ключа MapTiler в режиме разработки карта берёт тайлы с публичного сервера OSM; в продакшене ключ обязателен.
+## Карта
+
+Подложка — один файл `web/public/map/tomsk.pmtiles` (вырезка Томска из сборки [Protomaps](https://protomaps.com) на данных OpenStreetMap, около 15 МБ). Рядом лежат шрифты и значки. Ключей, лимитов и сторонних серверов нет; браузер запрашивает из файла только нужные фрагменты (HTTP Range).
+
+Файл карты в git не хранится. Собрать его:
+
+```bash
+# утилита: https://github.com/protomaps/go-pmtiles/releases, положить в tools/pmtiles
+# дата в адресе — любая свежая сборка со страницы https://maps.protomaps.com/builds/
+tools/pmtiles extract https://build.protomaps.com/20260930.pmtiles web/public/map/tomsk.pmtiles \
+  --bbox=84.70,56.33,85.30,56.64 --maxzoom=15
+```
+
+Границы вырезки совпадают с `bounds` города в `web/src/lib/cities.ts`. Для нового города нужен свой файл `{slug}.pmtiles`. При выкладке файл загружается на хостинг в `map/` отдельно от сборки фронтенда.
+
+Подпись «© OpenStreetMap» на карте обязательна по лицензии данных.
 
 Демо-точки (`api/database/seeders/data/tomsk.json`) вымышленные, координаты примерные; сидер добавляет их только в окружении `local`.
 

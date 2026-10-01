@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { sendReport, setConfirmed, type Report } from '../lib/api.ts'
 import { people, plural, STATUS_LABELS, TYPE_LABELS } from '../lib/format.ts'
-import { reverseGeocode } from '../lib/geocode.ts'
 import { downscale } from '../lib/image.ts'
 import type { City, Point, PointDetail, PointType } from '../lib/types.ts'
 
@@ -61,7 +60,6 @@ const CHECK_PATH = 'm5 12.5 4.5 4.5L19 7'
 export default function ReportFlow({ city, center, onPinning, onLocate, onCreated, onConfirmations, onClose }: Props) {
   const [screen, setScreen] = useState<Screen>({ name: 'form', step: 1 })
   const [draft, setDraft] = useState<Draft>({ photos: [], place: null, address: '', type: null, comment: '', contact: '' })
-  const [near, setNear] = useState<{ address: string; district: string | null } | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -74,19 +72,6 @@ export default function ReportFlow({ city, center, onPinning, onLocate, onCreate
     photos.current = draft.photos
   })
   useEffect(() => () => photos.current.forEach((p) => URL.revokeObjectURL(p.url)), [])
-
-  // Пока карту двигают под пин, подсказываем ближайший адрес.
-  useEffect(() => {
-    if (!pinning || !center) return
-    const abort = new AbortController()
-    const timer = setTimeout(() => {
-      reverseGeocode(center.lat, center.lng, abort.signal).then((place) => !abort.signal.aborted && setNear(place))
-    }, 350)
-    return () => {
-      clearTimeout(timer)
-      abort.abort()
-    }
-  }, [pinning, center])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -116,7 +101,6 @@ export default function ReportFlow({ city, center, onPinning, onLocate, onCreate
   }
 
   const startPin = () => {
-    setNear(null)
     onPinning(true)
     setScreen({ name: 'pin' })
   }
@@ -124,10 +108,7 @@ export default function ReportFlow({ city, center, onPinning, onLocate, onCreate
   const endPin = (accept: boolean) => {
     onPinning(false)
     if (accept && center) {
-      patch({
-        place: { ...center, district: near?.district ?? null },
-        address: draft.address.trim() ? draft.address : (near?.address ?? ''),
-      })
+      patch({ place: { ...center, district: null } })
     }
     setScreen({ name: 'form', step: 2 })
   }
@@ -194,9 +175,7 @@ export default function ReportFlow({ city, center, onPinning, onLocate, onCreate
         </div>
         <div className="pin-bar">
           <h3>Подвиньте карту под пин</h3>
-          <p role="status">
-            {near ? `Рядом: ${near.address}${near.district ? `, ${near.district} район` : ''}` : 'Ищем ближайший адрес…'}
-          </p>
+          <p>Остриё пина должно указывать на заваленное место.</p>
           {error && <p className="form-error">{error}</p>}
           <div className="pin-btns">
             <button className="btn" onClick={() => endPin(false)}>
@@ -312,7 +291,7 @@ export default function ReportFlow({ city, center, onPinning, onLocate, onCreate
     } else if (step === 2) {
       body = (
         <>
-          <p>Где это? Укажите точку на карте, а номер дома допишите, если знаете.</p>
+          <p>Где это? Укажите точку на карте и напишите адрес.</p>
           {draft.place && (
             <div className="place-box">
               <Icon d={PIN_PATH} />

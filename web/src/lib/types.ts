@@ -53,4 +53,6 @@ export interface City {
   name: string
   center: [number, number]
   zoom: number
+  /** Границы вырезки карты: [запад, юг, восток, север]. За них карту не увести. */
+  bounds: [number, number, number, number]
 }

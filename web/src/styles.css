@@ -84,22 +84,10 @@ button {
   z-index: 0;
   background: var(--bg);
 }
-.leaflet-container {
-  background: var(--bg);
-  font-family: inherit;
-}
-.map-note {
-  position: absolute;
-  inset: 50% 16px auto;
-  z-index: 500;
-  margin: 0;
-  text-align: center;
-  color: var(--ink-2);
-}
 
-.mk-wrap {
-  background: none;
-  border: 0;
+.mk-anchor {
+  width: 0;
+  height: 0;
 }
 .mk {
   position: absolute;
@@ -360,13 +348,26 @@ button {
   overflow-y: auto;
   overscroll-behavior: contain;
 }
-/* Подпись карты и её копирайты остаются видны над шторкой. */
-.leaflet-bottom {
+
+/* Подпись карты обязательна по лицензии OSM: на телефоне держим её над шторкой, слева от кнопки отметки. */
+.maplibregl-map {
+  font: inherit;
+}
+.maplibregl-ctrl-bottom-right {
+  left: 0;
+  right: auto;
   bottom: var(--sheet-h);
   transition: bottom 0.25s ease;
 }
-.leaflet-control-zoom {
+.maplibregl-ctrl-top-right {
   display: none;
+}
+.maplibregl-ctrl-attrib {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  color: var(--ink-2);
+}
+.maplibregl-ctrl-attrib a {
+  color: inherit;
 }
 
 /* list */
@@ -681,7 +682,8 @@ button {
 .fab {
   position: fixed;
   right: 12px;
-  bottom: calc(var(--sheet-h) + 12px);
+  /* Под кнопкой остаётся полоска для обязательной подписи карты. */
+  bottom: calc(var(--sheet-h) + 34px);
   z-index: 1001;
   display: inline-flex;
   align-items: center;
@@ -696,6 +698,10 @@ button {
   font-size: 15px;
   box-shadow: var(--shadow);
   transition: bottom 0.25s ease;
+}
+/* На телефоне при открытой карточке кнопка закрывала бы саму точку на карте. */
+.fab.with-card {
+  display: none;
 }
 .fab svg {
   width: 22px;
@@ -1015,7 +1021,7 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .sheet,
   .fab,
-  .leaflet-bottom {
+  .maplibregl-ctrl-bottom-right {
     transition: none;
   }
 }
@@ -1057,13 +1063,17 @@ button {
   .card-top {
     padding-top: 14px;
   }
-  .leaflet-bottom {
+  .maplibregl-ctrl-bottom-right {
+    left: auto;
+    right: 0;
     bottom: 0;
   }
-  .leaflet-control-zoom {
+  .maplibregl-ctrl-top-right {
     display: block;
   }
-  .fab {
+  .fab,
+  .fab.with-card {
+    display: inline-flex;
     right: 20px;
     bottom: 32px;
     height: 54px;

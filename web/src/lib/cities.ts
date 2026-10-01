@@ -1,7 +1,7 @@
 import type { City } from './types.ts'
 
 export const CITIES: Record<string, City> = {
-  tomsk: { slug: 'tomsk', name: 'Томск', center: [56.4846, 84.9682], zoom: 12 },
+  tomsk: { slug: 'tomsk', name: 'Томск', center: [56.4846, 84.9682], zoom: 12, bounds: [84.7, 56.33, 85.3, 56.64] },
 }
 
 export const DEFAULT_CITY = CITIES.tomsk

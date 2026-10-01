@@ -9,6 +9,7 @@ import { fetchPoints } from './lib/api.ts'
 import { cityFromPath } from './lib/cities.ts'
 import { usePointRoute } from './lib/router.ts'
 import type { SheetState } from './lib/sheet.ts'
+import { useTheme } from './lib/theme.ts'
 import type { Point, PointDetail, SortKey, StatusFilter } from './lib/types.ts'
 
 const city = cityFromPath(window.location.pathname)
@@ -25,6 +26,7 @@ export default function App() {
   const [selectedId, openPoint] = usePointRoute(city)
   const [sheet, setSheet] = useState<SheetState>(selectedId === null ? 'peek' : 'half')
 
+  const [theme, toggleTheme] = useTheme()
   const [reporting, setReporting] = useState(false)
   const [pinning, setPinning] = useState(false)
   const [center, setCenter] = useState<{ lat: number; lng: number } | null>(null)
@@ -89,6 +91,7 @@ export default function App() {
         points={onMap}
         selected={selected}
         sheet={sheet}
+        dark={theme === 'dark'}
         onSelect={open}
         onCenter={pinning ? reportCenter : undefined}
         flyTo={flyTo}
@@ -105,6 +108,8 @@ export default function App() {
             if (q) setSheet((s) => (s === 'peek' ? 'half' : s))
           }}
           note={note}
+          theme={theme}
+          onToggleTheme={toggleTheme}
         />
         {points && (
           <Sheet state={sheet} onState={setSheet} scrollKey={String(selectedId)}>

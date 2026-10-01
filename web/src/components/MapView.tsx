@@ -23,8 +23,6 @@ const FOCUS_ZOOM = 16
 const DESKTOP_PANEL = 436
 const MOBILE_BAR = 160
 
-const scheme = () => window.matchMedia('(prefers-color-scheme: dark)')
-
 function markerElement(p: Point, selected: boolean, onSelect: (id: number) => void): HTMLElement {
   const inner =
     p.status === 'snowed'
@@ -54,6 +52,7 @@ interface Props {
   points: Point[]
   selected: Point | null
   sheet: SheetState
+  dark: boolean
   onSelect: (id: number) => void
   /** Если задан, карта сообщает свой центр: так выбирают место под пином. */
   onCenter?: (lat: number, lng: number) => void
@@ -61,7 +60,7 @@ interface Props {
   flyTo?: { lat: number; lng: number; key: number } | null
 }
 
-export default function MapView({ city, points, selected, sheet, onSelect, onCenter, flyTo }: Props) {
+export default function MapView({ city, points, selected, sheet, dark, onSelect, onCenter, flyTo }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const [map, setMap] = useState<maplibregl.Map | null>(null)
   const selectedId = selected?.id ?? null
@@ -72,11 +71,12 @@ export default function MapView({ city, points, selected, sheet, onSelect, onCen
     centerListener.current = onCenter
   })
 
+  // Какая тема сейчас нарисована на карте: чтобы не перезагружать стиль без нужды.
+  const painted = useRef(dark)
   useEffect(() => {
-    const media = scheme()
     const m = new maplibregl.Map({
       container: el.current!,
-      style: mapStyle(city, media.matches),
+      style: mapStyle(city, painted.current),
       center: [city.center[1], city.center[0]],
       // Масштаб MapLibre на единицу меньше привычного «плиточного».
       zoom: city.zoom - 1,
@@ -97,16 +97,19 @@ export default function MapView({ city, points, selected, sheet, onSelect, onCen
       const c = m.getCenter()
       centerListener.current?.(c.lat, c.lng)
     })
-    const applyTheme = () => m.setStyle(mapStyle(city, media.matches))
-    media.addEventListener('change', applyTheme)
     setMap(m)
 
     return () => {
-      media.removeEventListener('change', applyTheme)
       m.remove()
       setMap(null)
     }
   }, [city])
+
+  useEffect(() => {
+    if (!map || painted.current === dark) return
+    painted.current = dark
+    map.setStyle(mapStyle(city, dark))
+  }, [map, city, dark])
 
   // Маркеры и кластеры: пересчитываем при смене точек, выбора и после каждого движения карты.
   useEffect(() => {

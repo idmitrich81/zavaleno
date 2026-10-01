@@ -23,8 +23,9 @@
   font-family: 'Onest', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
   color-scheme: light;
 }
+/* Тёмная тема: по настройке устройства, если человек не выбрал светлую, и всегда — если выбрал тёмную. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     --bg: #0e1622;
     --surface: #162131;
     --surface-2: #1c293b;
@@ -43,6 +44,25 @@
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
+}
+:root[data-theme='dark'] {
+  --bg: #0e1622;
+  --surface: #162131;
+  --surface-2: #1c293b;
+  --ink: #e7edf4;
+  --ink-2: #a6b3c4;
+  --ink-3: #7a889b;
+  --line: #28374b;
+  --red: #f05a61;
+  --amber: #f0a92b;
+  --green: #34c27e;
+  --red-soft: #3a1e24;
+  --amber-soft: #3a2d14;
+  --green-soft: #16352a;
+  --primary: #e7edf4;
+  --on-primary: #0e1622;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 10px 30px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }
 
 *,
@@ -183,6 +203,14 @@ button {
   border-radius: 0 0 var(--r-l) var(--r-l);
   box-shadow: var(--shadow);
   padding: calc(10px + env(safe-area-inset-top, 0px)) 12px 10px;
+}
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bar-row .logo {
+  flex: 1;
 }
 .logo {
   display: flex;

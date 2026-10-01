@@ -1,0 +1,18 @@
+[
+  {"id": 1, "address": "ул. Красноармейская, 101", "district": "Советский", "lat": 56.4655, "lng": 84.969, "type": "yard", "status": "snowed", "createdDaysAgo": 6, "statusDaysAgo": null, "confirmations": 23},
+  {"id": 2, "address": "пр. Ленина, 46", "district": "Советский", "lat": 56.47, "lng": 84.948, "type": "sidewalk", "status": "snowed", "createdDaysAgo": 3, "statusDaysAgo": null, "confirmations": 11},
+  {"id": 3, "address": "ул. Учебная, 42", "district": "Кировский", "lat": 56.4605, "lng": 84.956, "type": "parking", "status": "in_work", "createdDaysAgo": 4, "statusDaysAgo": 1, "confirmations": 16},
+  {"id": 4, "address": "Комсомольский пр., 48", "district": "Советский", "lat": 56.478, "lng": 84.979, "type": "yard", "status": "snowed", "createdDaysAgo": 9, "statusDaysAgo": null, "confirmations": 41},
+  {"id": 5, "address": "ул. Елизаровых, 17", "district": "Советский", "lat": 56.464, "lng": 84.98, "type": "yard", "status": "cleared", "createdDaysAgo": 8, "statusDaysAgo": 2, "confirmations": 19},
+  {"id": 6, "address": "Иркутский тракт, 86", "district": "Октябрьский", "lat": 56.506, "lng": 85.02, "type": "parking", "status": "snowed", "createdDaysAgo": 4, "statusDaysAgo": null, "confirmations": 8},
+  {"id": 7, "address": "ул. Говорова, 50", "district": "Ленинский", "lat": 56.516, "lng": 84.985, "type": "yard", "status": "in_work", "createdDaysAgo": 3, "statusDaysAgo": 0, "confirmations": 12},
+  {"id": 8, "address": "пр. Фрунзе, 115", "district": "Советский", "lat": 56.476, "lng": 84.976, "type": "sidewalk", "status": "cleared", "createdDaysAgo": 5, "statusDaysAgo": 1, "confirmations": 6},
+  {"id": 9, "address": "ул. Сибирская, 33", "district": "Советский", "lat": 56.483, "lng": 84.983, "type": "roof", "status": "snowed", "createdDaysAgo": 2, "statusDaysAgo": null, "confirmations": 15},
+  {"id": 10, "address": "Академический пр., 8", "district": "Советский", "lat": 56.476, "lng": 85.05, "type": "street", "status": "cleared", "createdDaysAgo": 6, "statusDaysAgo": 3, "confirmations": 9},
+  {"id": 11, "address": "ул. Нахимова, 13", "district": "Кировский", "lat": 56.456, "lng": 84.96, "type": "yard", "status": "snowed", "createdDaysAgo": 12, "statusDaysAgo": null, "confirmations": 37},
+  {"id": 12, "address": "пер. Нахановича, 5", "district": "Советский", "lat": 56.486, "lng": 84.95, "type": "yard", "status": "cleared", "createdDaysAgo": 7, "statusDaysAgo": 4, "confirmations": 14},
+  {"id": 13, "address": "ул. Пушкина, 63", "district": "Октябрьский", "lat": 56.496, "lng": 84.98, "type": "street", "status": "in_work", "createdDaysAgo": 5, "statusDaysAgo": 2, "confirmations": 21},
+  {"id": 14, "address": "ул. Вершинина, 25", "district": "Кировский", "lat": 56.462, "lng": 84.9545, "type": "parking", "status": "snowed", "createdDaysAgo": 5, "statusDaysAgo": null, "confirmations": 9},
+  {"id": 15, "address": "ул. Ивана Черных, 97", "district": "Октябрьский", "lat": 56.509, "lng": 85.032, "type": "yard", "status": "snowed", "createdDaysAgo": 7, "statusDaysAgo": null, "confirmations": 19},
+  {"id": 16, "address": "Московский тракт, 2", "district": "Кировский", "lat": 56.469, "lng": 84.94, "type": "sidewalk", "status": "cleared", "createdDaysAgo": 3, "statusDaysAgo": 1, "confirmations": 5}
+]

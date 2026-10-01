@@ -1,0 +1,56 @@
+import type { City, Point, StatusFilter } from '../lib/types.ts'
+
+const FILTERS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Все' },
+  { value: 'snowed', label: 'Завалено' },
+  { value: 'in_work', label: 'В работе' },
+  { value: 'cleared', label: 'Убрано' },
+]
+
+interface Props {
+  city: City
+  points: Point[]
+  filter: StatusFilter
+  onFilter: (f: StatusFilter) => void
+  note: string | null
+}
+
+export default function TopBar({ city, points, filter, onFilter, note }: Props) {
+  const count = (f: StatusFilter) => (f === 'all' ? points.length : points.filter((p) => p.status === f).length)
+
+  return (
+    <header className="bar">
+      <div className="logo">
+        <div className="logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17" />
+            <path d="m9 4 3 2 3-2M9 20l3-2 3 2" />
+          </svg>
+        </div>
+        <div className="logo-text">
+          <b>Завалено</b>
+          <span>Снежная карта: {city.name}</span>
+        </div>
+      </div>
+      <div className="chips" role="group" aria-label="Фильтр по статусу">
+        {FILTERS.map((f) => (
+          <button
+            key={f.value}
+            className={`chip ${f.value}`}
+            aria-pressed={filter === f.value}
+            onClick={() => onFilter(f.value)}
+          >
+            {f.value !== 'all' && <span className="dot" />}
+            {f.label}
+            <span className="cnt">{count(f.value)}</span>
+          </button>
+        ))}
+      </div>
+      {note && (
+        <p className="bar-note" role="status">
+          {note}
+        </p>
+      )}
+    </header>
+  )
+}
